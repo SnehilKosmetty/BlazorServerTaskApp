@@ -1,0 +1,84 @@
+﻿@page "/"
+@using BlazorServerTaskApp.Data
+@inject TaskService TaskService
+
+<PageTitle>Task Manager</PageTitle>
+
+<h1>Task Manager</h1>
+
+<div class="mb-4">
+    <EditForm Model="newTask" OnValidSubmit="HandleAddTask" class="form-inline">
+        <div class="input-group">
+            <InputText @bind-Value="newTask.Title" class="form-control" placeholder="Enter task title" />
+            <button type="submit" class="btn btn-primary ms-2">Add Task</button>
+        </div>
+    </EditForm>
+</div>
+
+@if (tasks == null)
+{
+    <p>Loading...</p>
+}
+else if (tasks.Count == 0)
+{
+    <p>No tasks available.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var task in tasks)
+            {
+                <tr>
+                    <td>@task.Title</td>
+                    <td>@(task.IsCompleted ? "Completed" : "Pending")</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" @onclick="() => ToggleTaskStatus(task)">Toggle</button>
+                        <a class="btn btn-sm btn-warning" href="/edit/@task.Id">Edit</a>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteTask(task.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TaskItem> tasks = new();
+    private TaskItem newTask = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        tasks = await TaskService.GetTasksAsync();
+    }
+
+    private async Task HandleAddTask()
+    {
+        if (!string.IsNullOrWhiteSpace(newTask.Title))
+        {
+            await TaskService.AddTaskAsync(newTask);
+            newTask = new TaskItem();
+            tasks = await TaskService.GetTasksAsync();
+        }
+    }
+
+    private async Task ToggleTaskStatus(TaskItem task)
+    {
+        task.IsCompleted = !task.IsCompleted;
+        await TaskService.UpdateTaskAsync(task);
+        tasks = await TaskService.GetTasksAsync();
+    }
+
+    private async Task DeleteTask(int id)
+    {
+        await TaskService.DeleteTaskAsync(id);
+        tasks = await TaskService.GetTasksAsync();
+    }
+}
